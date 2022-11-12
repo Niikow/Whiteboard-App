@@ -1,0 +1,17 @@
+* {
+    margin: 0;
+    padding: 0;
+    /* box-sizing: border-box; */
+    /* height: 100%; */
+}
+
+#IDselect {
+    position: relative;
+    /* top: 40px; */
+}
+
+#whiteboard {
+    border: 2px solid black;
+    cursor: crosshair;
+    position: fixed;
+}
