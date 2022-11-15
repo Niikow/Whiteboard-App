@@ -7,6 +7,8 @@ var tempcontext = tempwhiteboard.getContext("2d");
 var colourButton = document.getElementById("PencilColour");
 var shapeButton = document.getElementById("SelectShape");
 var drawMethodSelected = shapeButton.value;
+var savePNGButton = document.getElementById("saveButton");
+var redrawButton = document.getElementById("redrawButton");
 
 // Window size
 whiteboard.height = window.innerHeight;
@@ -16,27 +18,40 @@ tempwhiteboard.width = window.innerWidth;
 
 // Main
 window.onload = function () {
-  function changeColour() {
-    var colour = colourButton.value;
-    tempcontext.strokeStyle = colour;
-    context.strokeStyle = colour;
-  }
+  // Set background to be white
+  context.fillStyle = "white";
+  context.fillRect(0, 0, whiteboard.width, whiteboard.height);
 
   colourButton.addEventListener("change", changeColour);
   shapeButton.addEventListener("change", () => {
     draw();
   });
+  savePNGButton.addEventListener("click", () => {
+    // Download png
+    var image = whiteboard
+      .toDataURL("image/png")
+      .replace("image/png", "image/octet-stream");
+    // Have to add .png at end of file name
+    window.location.href = image;
+  });
+  redrawButton.addEventListener("click", redraw);
 };
+
+function changeColour() {
+  var colour = colourButton.value;
+  tempcontext.strokeStyle = colour;
+  context.strokeStyle = colour;
+}
 
 // Variables
 let pencil = false;
 var canvasX, canvasY, startX, startY;
+var paths = [];
 
 // Selecting tool
 function draw() {
   drawMethodSelected = shapeButton.value;
   if (drawMethodSelected == "Line") {
-    console.log(drawMethodSelected);
     disableCircle();
     disableRectangle();
     enablePencil();
@@ -87,6 +102,20 @@ function disableRectangle() {
   window.removeEventListener("mousemove", drawRectangle);
 }
 
+function redraw() {
+  context.clearRect(0, 0, whiteboard.width, whiteboard.height);
+  tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
+  setTimeout(2000);
+  for (x in paths) {
+    context.beginPath();
+    context.linewidth = x.linewidth;
+    context.lineCap = x.lineCap;
+    context.moveTo(x.canvasX, x.canvasY);
+    context.closePath();
+    setTimeout(1000);
+  }
+}
+
 // DRAWING LINES
 function handleMouseDownPencil(e) {
   pencil = true;
@@ -98,6 +127,7 @@ function handleMouseUpPencil(e) {
   pencil = false;
 
   // Reset path to draw new lines without connecting to old line
+  context.drawImage(tempwhiteboard, 0, 0);
   tempcontext.beginPath();
 }
 
@@ -115,6 +145,14 @@ function drawPencil(e) {
   tempcontext.beginPath();
   // context.moveTo(e.clientX, e.clientY);
   tempcontext.moveTo(canvasX, canvasY);
+  paths.push({
+    linewidth: tempcontext.linewidth,
+    lineCap: tempcontext.lineCap,
+    strokeStyle: tempcontext.strokeStyle,
+    x: canvasX,
+    y: canvasY,
+  });
+  console.log(paths);
 }
 
 // DRAWING CIRCLES
@@ -140,7 +178,6 @@ function drawCircle(e) {
   canvasX = e.pageX - whiteboard.offsetLeft;
   canvasY = e.pageY - whiteboard.offsetTop;
 
-  tempcontext.save();
   tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
   tempcontext.beginPath();
 
