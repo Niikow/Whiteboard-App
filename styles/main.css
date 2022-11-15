@@ -10,7 +10,7 @@
     /* top: 40px; */
 }
 
-#whiteboard {
+#whiteboard, #tempwhiteboard{
     border: 2px solid black;
     cursor: crosshair;
     position: fixed;

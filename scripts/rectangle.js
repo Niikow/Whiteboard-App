@@ -38,6 +38,7 @@ function draw() {
   if (drawMethodSelected == "Line") {
     console.log(drawMethodSelected);
     disableCircle();
+    disableRectangle();
     enablePencil();
   } else if (drawMethodSelected == "Circle") {
     disablePencil();
