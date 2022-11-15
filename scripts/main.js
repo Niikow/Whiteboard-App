@@ -38,13 +38,16 @@ function draw() {
   if (drawMethodSelected == "Line") {
     console.log(drawMethodSelected);
     disableCircle();
+    disableRectangle();
     enablePencil();
   } else if (drawMethodSelected == "Circle") {
+    disableRectangle();
     disablePencil();
     enableCircle();
   } else if (drawMethodSelected == "Rectangle") {
     disablePencil();
     disableCircle();
+    enableRectangle();
   }
 }
 
@@ -70,6 +73,18 @@ function disableCircle() {
   window.removeEventListener("mousedown", handleMouseDownCircle);
   window.removeEventListener("mouseup", handleMouseUpCircle);
   window.removeEventListener("mousemove", drawCircle);
+}
+
+function enableRectangle() {
+  window.addEventListener("mousedown", handleMouseDownRectangle);
+  window.addEventListener("mouseup", handleMouseUpRectangle);
+  window.addEventListener("mousemove", drawRectangle);
+}
+
+function disableRectangle() {
+  window.removeEventListener("mousedown", handleMouseDownRectangle);
+  window.removeEventListener("mouseup", handleMouseUpRectangle);
+  window.removeEventListener("mousemove", drawRectangle);
 }
 
 // DRAWING LINES
@@ -152,4 +167,36 @@ function drawCircle(e) {
   );
 
   tempcontext.stroke();
+}
+
+// DRAWING RECTANGLES
+function handleMouseDownRectangle(e) {
+  startX = e.pageX - whiteboard.offsetLeft;
+  startY = e.pageY - whiteboard.offsetTop;
+
+  pencil = true;
+}
+
+function handleMouseUpRectangle(e) {
+  pencil = false;
+
+  context.drawImage(tempwhiteboard, 0, 0);
+}
+
+function drawRectangle(e) {
+  if (!pencil) return;
+
+  tempcontext.linewidth = 10;
+  tempcontext.lineCap = "round";
+
+  canvasX = e.pageX - whiteboard.offsetLeft;
+  canvasY = e.pageY - whiteboard.offsetTop;
+
+  tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
+  //   tempcontext.beginPath();
+
+  var width = canvasX - startX;
+  var height = canvasY - startY;
+
+  tempcontext.strokeRect(startX, startY, width, height);
 }
