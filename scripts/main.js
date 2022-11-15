@@ -102,17 +102,13 @@ function disableRectangle() {
   window.removeEventListener("mousemove", drawRectangle);
 }
 
+// REDRAWING LINES
 function redraw() {
   context.clearRect(0, 0, whiteboard.width, whiteboard.height);
   tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
-  setTimeout(2000);
-  for (x in paths) {
-    context.beginPath();
-    context.linewidth = x.linewidth;
-    context.lineCap = x.lineCap;
-    context.moveTo(x.canvasX, x.canvasY);
-    context.closePath();
-    setTimeout(1000);
+
+  for (var x in paths) {
+    console.log(x.lineTo);
   }
 }
 
@@ -141,18 +137,15 @@ function drawPencil(e) {
   canvasY = e.pageY - whiteboard.offsetTop;
   // context.lineTo(e.clientX, e.clientY);
   tempcontext.lineTo(canvasX, canvasY);
+
+  paths.push({
+    lineTo: { canvasX, canvasY },
+  });
+
   tempcontext.stroke();
   tempcontext.beginPath();
   // context.moveTo(e.clientX, e.clientY);
   tempcontext.moveTo(canvasX, canvasY);
-  paths.push({
-    linewidth: tempcontext.linewidth,
-    lineCap: tempcontext.lineCap,
-    strokeStyle: tempcontext.strokeStyle,
-    x: canvasX,
-    y: canvasY,
-  });
-  console.log(paths);
 }
 
 // DRAWING CIRCLES
