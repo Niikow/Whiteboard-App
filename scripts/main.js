@@ -107,9 +107,7 @@ function redraw() {
   context.clearRect(0, 0, whiteboard.width, whiteboard.height);
   tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
 
-  for (var x in paths) {
-    console.log(x.lineTo);
-  }
+  console.log(paths);
 }
 
 // DRAWING LINES
@@ -138,14 +136,14 @@ function drawPencil(e) {
   // context.lineTo(e.clientX, e.clientY);
   tempcontext.lineTo(canvasX, canvasY);
 
-  paths.push({
-    lineTo: { canvasX, canvasY },
-  });
+  paths.push({ lineTo: { canvasX, canvasY } });
 
   tempcontext.stroke();
   tempcontext.beginPath();
   // context.moveTo(e.clientX, e.clientY);
   tempcontext.moveTo(canvasX, canvasY);
+
+  paths.push({ moveTo: { canvasX, canvasY } });
 }
 
 // DRAWING CIRCLES
