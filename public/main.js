@@ -111,7 +111,7 @@ const pencilDrawer = {
         tempcontext.linewidth = 10;
         tempcontext.lineCap = "round";
 
-        if (pencil) {
+        if (pressedDown) {
             io.emit("drawPencil", { canvasX, canvasY });
             tempcontext.lineTo(canvasX, canvasY);
             tempcontext.stroke();
@@ -131,7 +131,7 @@ const circleDrawer = {
     },
 
     draw: function (e) {
-        if (!pencil) return;
+        if (!pressedDown) return;
 
         tempcontext.linewidth = 10;
         tempcontext.lineCap = "round";
