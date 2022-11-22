@@ -19,6 +19,12 @@ whiteboard.width = window.innerWidth;
 tempwhiteboard.height = window.innerHeight;
 tempwhiteboard.width = window.innerWidth;
 
+
+// Variables
+let pressedDown = false;
+let canvasX, canvasY, startX, startY;
+let drawer
+
 // Main
 window.onload = function () {
     // Set background to be white
@@ -36,7 +42,27 @@ window.onload = function () {
         window.location.href = image;
     });
     redrawButton.addEventListener("click", redraw);
+
+
+    window.addEventListener('mousedown', (e) => {
+        pressedDown = true;
+        drawer.mouseDown(e)
+    })
+
+    window.addEventListener('mouseup', (e) => {
+        pressedDown = false
+        drawer.mouseUp(e)
+    })
+
+    window.addEventListener('mousemove', (e) => {
+        if (pressedDown)
+            drawer.draw(e)
+    })
+
 };
+
+
+
 
 function changeColour() {
     const colour = colourButton.value;
@@ -44,9 +70,7 @@ function changeColour() {
     context.strokeStyle = colour;
 }
 
-// Variables
-let pencil = false;
-let canvasX, canvasY, startX, startY;
+
 
 // Selecting tool
 function draw() {
@@ -54,59 +78,128 @@ function draw() {
 
     switch (drawMethodSelected) {
         case "Line":
-            disableCircle();
-            disableRectangle();
-            enablePencil();
+            drawer = pencilDrawer;
             break;
         case "Circle":
-            disableRectangle();
-            disablePencil();
-            enableCircle();
+            drawer = circleDrawer;
             break;
 
         case "Rectangle":
-            disablePencil();
-            disableCircle();
-            enableRectangle();
+            drawer = rectangleDrawer;
             break;
+    }
+
+}
+
+const pencilDrawer = {
+    mouseDown: function (e) {
+        tempcontext.moveTo(canvasX, canvasY);
+        io.emit("down", { canvasX, canvasY });
+        drawPencil(e);
+    },
+
+    mouseUp: function (e) {
+        // Reset path to draw new lines without connecting to old line
+        context.drawImage(tempwhiteboard, 0, 0);
+        tempcontext.beginPath();
+    },
+
+    draw: function (e) {
+        canvasX = e.pageX - whiteboard.offsetLeft;
+        canvasY = e.pageY - whiteboard.offsetTop;
+
+        tempcontext.linewidth = 10;
+        tempcontext.lineCap = "round";
+
+        if (pencil) {
+            io.emit("drawPencil", { canvasX, canvasY });
+            tempcontext.lineTo(canvasX, canvasY);
+            tempcontext.stroke();
+        }
+    }
+
+}
+
+const circleDrawer = {
+    mouseDown: function (e) {
+        startX = e.pageX - whiteboard.offsetLeft;
+        startY = e.pageY - whiteboard.offsetTop;
+    },
+
+    mouseUp: function (e) {
+        context.drawImage(tempwhiteboard, 0, 0);
+    },
+
+    draw: function (e) {
+        if (!pencil) return;
+
+        tempcontext.linewidth = 10;
+        tempcontext.lineCap = "round";
+
+        // Set mouse cursor pointer according to whiteboard
+        canvasX = e.pageX - whiteboard.offsetLeft;
+        canvasY = e.pageY - whiteboard.offsetTop;
+
+        tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
+        tempcontext.beginPath();
+
+        tempcontext.moveTo(startX, startY + (canvasY - startY) / 2);
+
+        // Draws top half of circle
+        tempcontext.bezierCurveTo(
+            startX,
+            startY,
+            canvasX,
+            startY,
+            canvasX,
+            startY + (canvasY - startY) / 2
+        );
+
+        // Draws bottom half of circle
+        tempcontext.bezierCurveTo(
+            canvasX,
+            canvasY,
+            startX,
+            canvasY,
+            startX,
+            startY + (canvasY - startY) / 2
+        );
+
+        tempcontext.stroke();
+    }
+
+}
+
+const rectangleDrawer = {
+    mouseDown: function (e) {
+        startX = e.pageX - whiteboard.offsetLeft;
+        startY = e.pageY - whiteboard.offsetTop;
+    },
+
+    mouseUp: function (e) {
+        context.drawImage(tempwhiteboard, 0, 0);
+    },
+
+    draw: function (e) {
+        tempcontext.linewidth = 10;
+        tempcontext.lineCap = "round";
+
+        canvasX = e.pageX - whiteboard.offsetLeft;
+        canvasY = e.pageY - whiteboard.offsetTop;
+
+        tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
+        //   tempcontext.beginPath();
+
+        const width = canvasX - startX;
+        const height = canvasY - startY;
+
+        tempcontext.strokeRect(startX, startY, width, height);
     }
 }
 
-function enablePencil() {
-    window.addEventListener("mousedown", handleMouseDownPencil);
-    window.addEventListener("mouseup", handleMouseUpPencil);
-    window.addEventListener("mousemove", drawPencil);
-}
 
-function disablePencil() {
-    window.removeEventListener("mousedown", handleMouseDownPencil);
-    window.removeEventListener("mouseup", handleMouseUpPencil);
-    window.removeEventListener("mousemove", drawPencil);
-}
 
-function enableCircle() {
-    window.addEventListener("mousedown", handleMouseDownCircle);
-    window.addEventListener("mouseup", handleMouseUpCircle);
-    window.addEventListener("mousemove", drawCircle);
-}
 
-function disableCircle() {
-    window.removeEventListener("mousedown", handleMouseDownCircle);
-    window.removeEventListener("mouseup", handleMouseUpCircle);
-    window.removeEventListener("mousemove", drawCircle);
-}
-
-function enableRectangle() {
-    window.addEventListener("mousedown", handleMouseDownRectangle);
-    window.addEventListener("mouseup", handleMouseUpRectangle);
-    window.addEventListener("mousemove", drawRectangle);
-}
-
-function disableRectangle() {
-    window.removeEventListener("mousedown", handleMouseDownRectangle);
-    window.removeEventListener("mouseup", handleMouseUpRectangle);
-    window.removeEventListener("mousemove", drawRectangle);
-}
 
 // REDRAWING LINES
 function redraw() {
@@ -116,36 +209,7 @@ function redraw() {
     console.log(paths);
 }
 
-// DRAWING LINES
-function handleMouseDownPencil(e) {
-    tempcontext.moveTo(canvasX, canvasY);
-    io.emit("down", { canvasX, canvasY });
-    pencil = true;
 
-    drawPencil(e);
-}
-
-function handleMouseUpPencil(e) {
-    pencil = false;
-
-    // Reset path to draw new lines without connecting to old line
-    context.drawImage(tempwhiteboard, 0, 0);
-    tempcontext.beginPath();
-}
-
-function drawPencil(e) {
-    canvasX = e.pageX - whiteboard.offsetLeft;
-    canvasY = e.pageY - whiteboard.offsetTop;
-
-    tempcontext.linewidth = 10;
-    tempcontext.lineCap = "round";
-
-    if (pencil) {
-        io.emit("drawPencil", { canvasX, canvasY });
-        tempcontext.lineTo(canvasX, canvasY);
-        tempcontext.stroke();
-    }
-}
 
 // Draw lines for other users
 io.on("onDrawPencil", ({ canvasX, canvasY }) => {
@@ -157,85 +221,3 @@ io.on("onDown", ({ canvasX, canvasY }) => {
     tempcontext.moveTo(canvasX, canvasY);
 });
 
-// DRAWING CIRCLES
-function handleMouseDownCircle(e) {
-    startX = e.pageX - whiteboard.offsetLeft;
-    startY = e.pageY - whiteboard.offsetTop;
-    pencil = true;
-}
-
-function handleMouseUpCircle(e) {
-    pencil = false;
-
-    context.drawImage(tempwhiteboard, 0, 0);
-}
-
-function drawCircle(e) {
-    if (!pencil) return;
-
-    tempcontext.linewidth = 10;
-    tempcontext.lineCap = "round";
-
-    // Set mouse cursor pointer according to whiteboard
-    canvasX = e.pageX - whiteboard.offsetLeft;
-    canvasY = e.pageY - whiteboard.offsetTop;
-
-    tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
-    tempcontext.beginPath();
-
-    tempcontext.moveTo(startX, startY + (canvasY - startY) / 2);
-
-    // Draws top half of circle
-    tempcontext.bezierCurveTo(
-        startX,
-        startY,
-        canvasX,
-        startY,
-        canvasX,
-        startY + (canvasY - startY) / 2
-    );
-
-    // Draws bottom half of circle
-    tempcontext.bezierCurveTo(
-        canvasX,
-        canvasY,
-        startX,
-        canvasY,
-        startX,
-        startY + (canvasY - startY) / 2
-    );
-
-    tempcontext.stroke();
-}
-
-// DRAWING RECTANGLES
-function handleMouseDownRectangle(e) {
-    startX = e.pageX - whiteboard.offsetLeft;
-    startY = e.pageY - whiteboard.offsetTop;
-
-    pencil = true;
-}
-
-function handleMouseUpRectangle(e) {
-    pencil = false;
-
-    context.drawImage(tempwhiteboard, 0, 0);
-}
-
-function drawRectangle(e) {
-    if (!pencil) return;
-
-    tempcontext.linewidth = 10;
-    tempcontext.lineCap = "round";
-
-    canvasX = e.pageX - whiteboard.offsetLeft;
-    canvasY = e.pageY - whiteboard.offsetTop;
-
-    tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
-    //   tempcontext.beginPath();
-
-    const width = canvasX - startX;
-    const height = canvasY - startY;
-
-    tempcontext.strokeRect(startX, startY, width, height);
-}
