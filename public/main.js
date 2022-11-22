@@ -70,7 +70,6 @@ function draw() {
             enableRectangle();
             break;
     }
-
 }
 
 function enablePencil() {
