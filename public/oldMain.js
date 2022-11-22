@@ -114,10 +114,13 @@ function redraw() {
 
 // DRAWING LINES
 function handleMouseDownPencil(e) {
-  tempcontext.moveTo(canvasX, canvasY);
+  tempcontext.moveTo(
+    e.pageX - whiteboard.offsetLeft,
+    e.pageY - whiteboard.offsetTop
+  );
   io.emit("down", { canvasX, canvasY });
   pencil = true;
-
+  // Draw dots
   drawPencil(e);
 }
 
@@ -130,26 +133,31 @@ function handleMouseUpPencil(e) {
 }
 
 function drawPencil(e) {
-  canvasX = e.pageX - whiteboard.offsetLeft;
-  canvasY = e.pageY - whiteboard.offsetTop;
-
+  if (!pencil) return;
   tempcontext.linewidth = 10;
   tempcontext.lineCap = "round";
 
-  if (pencil) {
-    io.emit("drawPencil", { canvasX, canvasY });
-    tempcontext.lineTo(canvasX, canvasY);
-    tempcontext.stroke();
-  }
+  // Set mouse cursor pointer according to whiteboard
+  canvasX = e.pageX - whiteboard.offsetLeft;
+  canvasY = e.pageY - whiteboard.offsetTop;
+
+  tempcontext.lineTo(canvasX, canvasY);
+  tempcontext.stroke();
+
+  io.emit("drawPencil", { canvasX, canvasY });
 }
 
 // Draw lines for other users
 io.on("onDrawPencil", ({ canvasX, canvasY }) => {
   tempcontext.lineTo(canvasX, canvasY);
   tempcontext.stroke();
+
+  // tempcontext.lineTo(canvasX, canvasY);
+  // tempcontext.stroke();
 });
 
 io.on("onDown", ({ canvasX, canvasY }) => {
+  tempcontext.beginPath();
   tempcontext.moveTo(canvasX, canvasY);
 });
 

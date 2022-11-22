@@ -3,6 +3,10 @@ var tempwhiteboard = document.getElementById("tempwhiteboard");
 var context = whiteboard.getContext("2d");
 var tempcontext = tempwhiteboard.getContext("2d");
 
+// Transferring canvas data to users
+var whiteboardCopy = whiteboard.toDataURL("image/png", 0.6);
+var tempwhiteboardCopy = tempwhiteboard.toDataURL("image/png", 0.6);
+
 // GUI control
 var colourButton = document.getElementById("PencilColour");
 var shapeButton = document.getElementById("SelectShape");
@@ -115,7 +119,7 @@ function redraw() {
 // DRAWING LINES
 function handleMouseDownPencil(e) {
   tempcontext.moveTo(canvasX, canvasY);
-  io.emit("down", { canvasX, canvasY });
+  io.emit("down", { tempwhiteboardCopy, canvasX, canvasY });
   pencil = true;
 
   drawPencil(e);
@@ -149,7 +153,11 @@ io.on("onDrawPencil", ({ canvasX, canvasY }) => {
   tempcontext.stroke();
 });
 
-io.on("onDown", ({ canvasX, canvasY }) => {
+io.on("onDown", ({ tempwhiteboardCopy, canvasX, canvasY }) => {
+  var image = new Image();
+  image.src = tempwhiteboardCopy;
+  context.drawImage(image, 0, 0);
+  context.save();
   tempcontext.moveTo(canvasX, canvasY);
 });
 
@@ -215,23 +223,37 @@ function handleMouseDownRectangle(e) {
 function handleMouseUpRectangle(e) {
   pencil = false;
 
+  io.emit("saveRectangle", whiteboardCopy, tempwhiteboardCopy);
   context.drawImage(tempwhiteboard, 0, 0);
 }
 
 function drawRectangle(e) {
-  if (!pencil) return;
-
-  tempcontext.linewidth = 10;
-  tempcontext.lineCap = "round";
-
   canvasX = e.pageX - whiteboard.offsetLeft;
   canvasY = e.pageY - whiteboard.offsetTop;
 
-  tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
-  //   tempcontext.beginPath();
+  tempcontext.linewidth = 10;
+  tempcontext.lineCap = "round";
+  if (pencil) {
+    tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
 
-  var width = canvasX - startX;
-  var height = canvasY - startY;
+    var width = canvasX - startX;
+    var height = canvasY - startY;
 
-  tempcontext.strokeRect(startX, startY, width, height);
+    io.emit("drawRectangle", { startX, startY, width, height });
+    tempcontext.strokeRect(startX, startY, width, height);
+  }
 }
+
+io.on("onDrawRectangle", ({ startX, startY, width, height }) => {
+  // tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
+  tempcontext.strokeRect(startX, startY, width, height);
+});
+
+io.on("onSaveRectangle", ({ whiteboardCopy, tempwhiteboardCopy }) => {
+  var image = tempwhiteboardCopy;
+  // var image = new Image();
+  // image.onload = start;
+  // image.src = tempwhiteboardCopy;
+  context.drawImage(image, 0, 0);
+  context.save();
+});
