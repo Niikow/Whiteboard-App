@@ -1,5 +1,3 @@
-
-
 const whiteboard = document.getElementById("whiteboard");
 const context = whiteboard.getContext("2d");
 
@@ -9,9 +7,8 @@ const shapeButton = document.getElementById("SelectShape");
 const savePNGButton = document.getElementById("saveButton");
 const redrawButton = document.getElementById("redrawButton");
 
-
 // Connect
-var io = io.connect("http://localhost:10000");
+var io = io.connect("http://localhost:8888");
 
 // Window size
 whiteboard.height = window.innerHeight;
@@ -21,11 +18,9 @@ whiteboard.width = window.innerWidth;
 let canvasX, canvasY, startX, startY;
 let drawer;
 
-
 // Main
 window.onload = function () {
     draw();
-
 
     // Set background to be white
     context.fillStyle = "white";
@@ -46,26 +41,25 @@ window.onload = function () {
     let pressedDown = false;
 
     window.addEventListener("mousedown", (e) => {
-        [canvasX, canvasY] = coord(e)
+        [canvasX, canvasY] = coord(e);
         pressedDown = true;
         drawer?.mouseDown(e);
     });
 
     window.addEventListener("mouseup", (e) => {
-        [canvasX, canvasY] = coord(e)
+        [canvasX, canvasY] = coord(e);
         pressedDown = false;
         drawer?.mouseUp(e);
     });
 
     window.addEventListener("mousemove", (e) => {
-        [canvasX, canvasY] = coord(e)
+        [canvasX, canvasY] = coord(e);
         if (pressedDown) drawer?.draw(e);
     });
 };
 
-
 function coord(e) {
-    return [e.pageX - whiteboard.offsetLeft, e.pageY - whiteboard.offsetTop]
+    return [e.pageX - whiteboard.offsetLeft, e.pageY - whiteboard.offsetTop];
 }
 
 function changeColour() {
@@ -94,7 +88,7 @@ function draw() {
 const pencilDrawer = {
     mouseDown: function (e) {
         context.moveTo(canvasX, canvasY);
-        io.emit("down", {canvasX, canvasY});
+        io.emit("down", { canvasX, canvasY });
         this.draw(e);
     },
 
@@ -104,8 +98,8 @@ const pencilDrawer = {
 
     draw: function (e) {
         context.linewidth = 10;
-        context.lineCap = "round"
-        io.emit("drawPencil", {canvasX, canvasY});
+        context.lineCap = "round";
+        io.emit("drawPencil", { canvasX, canvasY });
         context.lineTo(canvasX, canvasY);
         context.stroke();
     },
@@ -117,8 +111,7 @@ const circleDrawer = {
         startY = e.pageY - whiteboard.offsetTop;
     },
 
-    mouseUp: function (e) {
-    },
+    mouseUp: function (e) {},
 
     draw: function (e) {
         context.linewidth = 10;
@@ -130,9 +123,9 @@ const circleDrawer = {
 
         context.clearRect(0, 0, whiteboard.width, whiteboard.height);
         context.beginPath();
-    
+
         context.moveTo(startX, startY + (canvasY - startY) / 2);
-    
+
         // Draws top half of circle
         context.bezierCurveTo(
             startX,
@@ -142,7 +135,7 @@ const circleDrawer = {
             canvasX,
             startY + (canvasY - startY) / 2
         );
-    
+
         // Draws top half of circle
         context.bezierCurveTo(
             startX,
@@ -173,8 +166,7 @@ const rectangleDrawer = {
         startY = e.pageY - whiteboard.offsetTop;
     },
 
-    mouseUp: function (e) {
-    },
+    mouseUp: function (e) {},
 
     draw: function (e) {
         context.linewidth = 10;
@@ -183,16 +175,7 @@ const rectangleDrawer = {
         canvasX = e.pageX - whiteboard.offsetLeft;
         canvasY = e.pageY - whiteboard.offsetTop;
 
-        // ok this code is sus
-        // like what i would do
-        // is first get rid of tempcontext
-        // tempwhiteboard etc
-        // very sussy
-        // yas
-
-        // that will require a bit of rewriting oki le
         context.clearRect(0, 0, whiteboard.width, whiteboard.height);
-        //   tempcontext.beginPath();
 
         const width = canvasX - startX;
         const height = canvasY - startY;
