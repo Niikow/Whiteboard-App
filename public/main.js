@@ -24,6 +24,8 @@ function selectDrawer(msg) {
             return circleDrawer;
         case "Rectangle":
             return rectangleDrawer;
+        case "Text":
+            return textDrawer;
     }
 }
 
@@ -200,3 +202,20 @@ const rectangleDrawer = {
         context.strokeRect(this.startX, this.startY, width, height);
     },
 };
+
+const textDrawer = {
+
+    mouseDown: function (context, x, y ){
+        this.startX = x;
+        this.startY = y;
+
+        //var userText = prompt("enter name");
+        
+        context.strokeText("hello world", x, y);
+
+
+    }
+
+
+
+}
