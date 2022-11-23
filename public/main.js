@@ -1,7 +1,5 @@
 const whiteboard = document.getElementById("whiteboard");
-const tempwhiteboard = document.getElementById("tempwhiteboard");
 const context = whiteboard.getContext("2d");
-const tempcontext = tempwhiteboard.getContext("2d");
 
 // GUI control
 const colourButton = document.getElementById("PencilColour");
@@ -16,14 +14,10 @@ const io = io.connect("http://localhost:8888");
 // Window size
 whiteboard.height = window.innerHeight;
 whiteboard.width = window.innerWidth;
-tempwhiteboard.height = window.innerHeight;
-tempwhiteboard.width = window.innerWidth;
-
 
 // Variables
-let pressedDown = false;
 let canvasX, canvasY, startX, startY;
-let drawer
+let drawer;
 
 // Main
 window.onload = function () {
@@ -41,36 +35,29 @@ window.onload = function () {
         // Have to add .png at end of file name
         window.location.href = image;
     });
-    redrawButton.addEventListener("click", redraw);
+    redrawButton.addEventListener("click", clear);
 
+    let pressedDown = false;
 
-    window.addEventListener('mousedown', (e) => {
+    window.addEventListener("mousedown", (e) => {
         pressedDown = true;
-        drawer.mouseDown(e)
-    })
+        drawer.mouseDown(e);
+    });
 
-    window.addEventListener('mouseup', (e) => {
-        pressedDown = false
-        drawer.mouseUp(e)
-    })
+    window.addEventListener("mouseup", (e) => {
+        pressedDown = false;
+        drawer.mouseUp(e);
+    });
 
-    window.addEventListener('mousemove', (e) => {
-        if (pressedDown)
-            drawer.draw(e)
-    })
-
+    window.addEventListener("mousemove", (e) => {
+        if (pressedDown) drawer.draw(e);
+    });
 };
-
-
-
 
 function changeColour() {
     const colour = colourButton.value;
-    tempcontext.strokeStyle = colour;
     context.strokeStyle = colour;
 }
-
-
 
 // Selecting tool
 function draw() {
@@ -88,37 +75,32 @@ function draw() {
             drawer = rectangleDrawer;
             break;
     }
-
 }
 
 const pencilDrawer = {
     mouseDown: function (e) {
-        tempcontext.moveTo(canvasX, canvasY);
+        context.moveTo(canvasX, canvasY);
         io.emit("down", { canvasX, canvasY });
         drawPencil(e);
     },
 
+    // if we replace tempcontext with just context should be fine
     mouseUp: function (e) {
-        // Reset path to draw new lines without connecting to old line
-        context.drawImage(tempwhiteboard, 0, 0);
-        tempcontext.beginPath();
+        context.beginPath();
     },
 
     draw: function (e) {
         canvasX = e.pageX - whiteboard.offsetLeft;
         canvasY = e.pageY - whiteboard.offsetTop;
+        
+        context.linewidth = 10;
+        context.lineCap = "round"
 
-        tempcontext.linewidth = 10;
-        tempcontext.lineCap = "round";
-
-        if (pressedDown) {
-            io.emit("drawPencil", { canvasX, canvasY });
-            tempcontext.lineTo(canvasX, canvasY);
-            tempcontext.stroke();
-        }
-    }
-
-}
+        io.emit("drawPencil", { canvasX, canvasY });
+        context.lineTo(canvasX, canvasY);
+        context.stroke();
+    },
+};
 
 const circleDrawer = {
     mouseDown: function (e) {
@@ -127,26 +109,24 @@ const circleDrawer = {
     },
 
     mouseUp: function (e) {
-        context.drawImage(tempwhiteboard, 0, 0);
     },
 
     draw: function (e) {
-        if (!pressedDown) return;
-
-        tempcontext.linewidth = 10;
-        tempcontext.lineCap = "round";
+        context.linewidth = 10;
+        context.lineCap = "round";
 
         // Set mouse cursor pointer according to whiteboard
         canvasX = e.pageX - whiteboard.offsetLeft;
         canvasY = e.pageY - whiteboard.offsetTop;
 
-        tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
-        tempcontext.beginPath();
+        context.clearRect(0, 0, whiteboard.width, whiteboard.height);
+        context.beginPath();
 
-        tempcontext.moveTo(startX, startY + (canvasY - startY) / 2);
+        context.moveTo(startX,     context.clearRect(0, 0, whiteboard.width, whiteboard.height);
+        context.clearRect(0, 0, whiteboard.width, whiteboard.height);startY + (canvasY - startY) / 2);
 
         // Draws top half of circle
-        tempcontext.bezierCurveTo(
+        context.bezierCurveTo(
             startX,
             startY,
             canvasX,
@@ -156,7 +136,7 @@ const circleDrawer = {
         );
 
         // Draws bottom half of circle
-        tempcontext.bezierCurveTo(
+        context.bezierCurveTo(
             canvasX,
             canvasY,
             startX,
@@ -165,10 +145,9 @@ const circleDrawer = {
             startY + (canvasY - startY) / 2
         );
 
-        tempcontext.stroke();
-    }
-
-}
+        context.stroke();
+    },
+};
 
 const rectangleDrawer = {
     mouseDown: function (e) {
@@ -177,47 +156,60 @@ const rectangleDrawer = {
     },
 
     mouseUp: function (e) {
-        context.drawImage(tempwhiteboard, 0, 0);
     },
 
     draw: function (e) {
-        tempcontext.linewidth = 10;
-        tempcontext.lineCap = "round";
+        context.linewidth = 10;
+        context.lineCap = "round";
 
         canvasX = e.pageX - whiteboard.offsetLeft;
         canvasY = e.pageY - whiteboard.offsetTop;
 
-        tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
+        // ok this code is sus
+        // like what i would do
+        // is first get rid of tempcontext
+        // tempwhiteboard etc
+        // very sussy
+        // yas
+
+        // that will require a bit of rewriting oki le
+        context.clearRect(0, 0, whiteboard.width, whiteboard.height);
         //   tempcontext.beginPath();
 
         const width = canvasX - startX;
         const height = canvasY - startY;
 
-        tempcontext.strokeRect(startX, startY, width, height);
-    }
-}
+        context.strokeRect(startX, startY, width, height);
+    },
+};
 
-
-
-
-
-// REDRAWING LINES
-function redraw() {
+// CLEAR WHITEBOARD
+function clear() {
     context.clearRect(0, 0, whiteboard.width, whiteboard.height);
-    tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
-
-    console.log(paths);
 }
-
-
 
 // Draw lines for other users
 io.on("onDrawPencil", ({ canvasX, canvasY }) => {
-    tempcontext.lineTo(canvasX, canvasY);
-    tempcontext.stroke();
+    context.lineTo(canvasX, canvasY);
+    context.stroke();
 });
 
 io.on("onDown", ({ canvasX, canvasY }) => {
-    tempcontext.moveTo(canvasX, canvasY);
+    context.moveTo(canvasX, canvasY);
 });
 
+io.on("onDrawRectangle", ({ startX, startY, width, height }) => {
+    // tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
+    context.strokeRect(startX, startY, width, height);
+});
+
+io.on("onSaveRectangle", ({ whiteboardCopy, tempwhiteboardCopy }) => {
+    var image = new Image();
+    image = tempwhiteboardCopy;
+    // var image = new Image(); //wagwan
+    // image.onload = start;
+    // image.src = tempwhiteboardCopy;
+    // oh here
+    context.drawImage(image, 0, 0);
+    context.save();
+});

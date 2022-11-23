@@ -244,16 +244,27 @@ function drawRectangle(e) {
     }
 }
 
+// wait how why tho
+// temp is very sussy
+// that shouldnt happen
+// oki
+
+// this stuff is for transferring the rectangle from one user to another
+// need .clearRect() to clear the rectangle from the tempcanvas otherwise it draws a billion tiny rectangles
+// however .clear also fucks with the save
+// i will do live demonstration 1sec
 io.on("onDrawRectangle", ({ startX, startY, width, height }) => {
     // tempcontext.clearRect(0, 0, whiteboard.width, whiteboard.height);
     tempcontext.strokeRect(startX, startY, width, height);
 });
 
 io.on("onSaveRectangle", ({ whiteboardCopy, tempwhiteboardCopy }) => {
-    var image = tempwhiteboardCopy;
-    // var image = new Image();
+    var image = new Image();
+    image = tempwhiteboardCopy;
+    // var image = new Image(); //wagwan
     // image.onload = start;
     // image.src = tempwhiteboardCopy;
+    // oh here
     context.drawImage(image, 0, 0);
     context.save();
 });
