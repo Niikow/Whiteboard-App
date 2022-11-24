@@ -203,6 +203,8 @@ const rectangleDrawer = {
     },
 };
 
+// new code 
+
 const textDrawer = {
 
     mouseDown: function (context, x, y ){
