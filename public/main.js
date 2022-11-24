@@ -207,16 +207,37 @@ const rectangleDrawer = {
 
 const textDrawer = {
 
+
     mouseDown: function (context, x, y ){
         this.startX = x;
         this.startY = y;
 
-        //var userText = prompt("enter name");
+        var input = document.createElement('textarea');
+        input.type = 'text';
+        //input.style.color = 'red';
+        input.style.position = 'fixed';
+        input.style.left = '100px';
+        input.style.top = '100px';
+        input.style.border = '2px solid';
+        input.style.borderColor = 'black';
+
+        document.body.appendChild(input);  
         
-        context.strokeText("hello world", x, y);
+    },
+
+    
 
 
-    }
+
+
+
+
+       //context.strokeText("userText", x, y);
+    //    context.fillStyle = 'red';
+    //    context.font = '30px verdana';
+    //    context.fillText("hello" ,x,y);
+    
+
 
 
 
