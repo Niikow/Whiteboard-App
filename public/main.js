@@ -54,7 +54,7 @@ const eventHandler = {
         img = null;
     },
 
-    mousedown: function ({ x, y }) {
+    mousedown: function ({ x, y, text }) {
         pressedDown = true;
         if (!drawer) return;
         if (drawer == textDrawer) {
@@ -68,6 +68,10 @@ const eventHandler = {
                 whiteboard.height
             );
         }
+        if (text) {
+            drawer.text = text;
+        }
+
         drawer.mouseDown(context, x, y);
     },
     changeDrawer: function ({ name }) {
@@ -126,10 +130,18 @@ window.onload = function () {
     fontSizeButton.addEventListener("change", () =>
         emit("changeFontSize", { name: fontSizeButton.value })
     );
+    whiteboard.addEventListener("mousedown", (e) => {
+        const arg = coord(e);
+        if (drawer == textDrawer) {
+            arg.text = prompt("Enter text");
+        }
+        emit("mousedown", arg);
+    });
 
-    window.addEventListener("mousedown", (e) => emit("mousedown", coord(e)));
-    window.addEventListener("mouseup", (e) => emit("mouseup", coord(e)));
-    window.addEventListener("mousemove", (e) => emit("mousemove", coord(e)));
+    whiteboard.addEventListener("mouseup", (e) => emit("mouseup", coord(e)));
+    whiteboard.addEventListener("mousemove", (e) =>
+        emit("mousemove", coord(e))
+    );
 };
 
 function coord(e) {
@@ -217,21 +229,14 @@ const rectangleDrawer = {
     },
 };
 
+// sussy
+//i don't think this is horror show
 const textDrawer = {
+    //need <0 now i can't switch to other tools
+    // i hab an idea
+
     mouseDown: function (context, x, y) {
-        this.startX = x;
-        this.startY = y;
-    },
-
-    mouseUp: function (context, x, y) {},
-
-    draw: function (context, x, y) {
-        if (this.startY < 0) return;
-        text = prompt("Enter text");
         context.fillStyle = colourButton.value;
-        context.fillText(text, this.startX, this.startY);
-        context.value = text;
-        // console.log(context.value);
-        pressedDown = false;
+        context.fillText(this.text, x, y);
     },
 };
