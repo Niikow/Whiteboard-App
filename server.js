@@ -26,6 +26,7 @@ io.on("connect", (socket) => {
         "changeDrawer",
         "changeColor",
         "clear",
+        "changeFontSize",
     ].forEach(relay);
 });
 

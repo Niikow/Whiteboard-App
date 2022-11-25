@@ -1,17 +1,20 @@
 const whiteboard = document.getElementById("whiteboard");
+const controls = document.getElementById("controls");
 
 // GUI control
 const colourButton = document.getElementById("PencilColour");
 const shapeButton = document.getElementById("SelectShape");
 const savePNGButton = document.getElementById("saveButton");
 const redrawButton = document.getElementById("redrawButton");
+const fontSizeButton = document.getElementById("FontSize");
 const context = whiteboard.getContext("2d");
 
 // Connect
 var io = io.connect("http://localhost:8888");
 
 // Window size
-whiteboard.height = window.innerHeight;
+whiteboard.style.top = 0 + controls.offsetHeight;
+whiteboard.height = window.innerHeight - controls.offsetHeight;
 whiteboard.width = window.innerWidth;
 
 // Selecting tool
@@ -24,11 +27,14 @@ function selectDrawer(msg) {
             return circleDrawer;
         case "Rectangle":
             return rectangleDrawer;
+        case "Text":
+            return textDrawer;
     }
 }
 
 // Selected tool
 let drawer = selectDrawer(shapeButton.value);
+let text;
 let img = null;
 let pressedDown = false;
 
@@ -51,6 +57,9 @@ const eventHandler = {
     mousedown: function ({ x, y }) {
         pressedDown = true;
         if (!drawer) return;
+        if (drawer == textDrawer) {
+            console.log(context.value);
+        }
         if (drawer.holdDown) {
             img = context.getImageData(
                 0,
@@ -73,7 +82,9 @@ const eventHandler = {
         context.clearRect(0, 0, whiteboard.width, whiteboard.height);
     },
 
-    drawText: function ({ x, y, text, font }) {},
+    changeFontSize: function ({ name }) {
+        context.font = `${name}px Arial`;
+    },
 };
 
 for (const [key, value] of Object.entries(eventHandler)) {
@@ -110,6 +121,11 @@ window.onload = function () {
     });
 
     redrawButton.addEventListener("click", () => emit("clear", {}));
+
+    // Change font size
+    fontSizeButton.addEventListener("change", () =>
+        emit("changeFontSize", { name: fontSizeButton.value })
+    );
 
     window.addEventListener("mousedown", (e) => emit("mousedown", coord(e)));
     window.addEventListener("mouseup", (e) => emit("mouseup", coord(e)));
@@ -198,5 +214,24 @@ const rectangleDrawer = {
         const width = x - this.startX;
         const height = y - this.startY;
         context.strokeRect(this.startX, this.startY, width, height);
+    },
+};
+
+const textDrawer = {
+    mouseDown: function (context, x, y) {
+        this.startX = x;
+        this.startY = y;
+    },
+
+    mouseUp: function (context, x, y) {},
+
+    draw: function (context, x, y) {
+        if (this.startY < 0) return;
+        text = prompt("Enter text");
+        context.fillStyle = colourButton.value;
+        context.fillText(text, this.startX, this.startY);
+        context.value = text;
+        // console.log(context.value);
+        pressedDown = false;
     },
 };
