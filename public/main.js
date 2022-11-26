@@ -10,7 +10,7 @@ const fontSizeButton = document.getElementById("FontSize");
 const context = whiteboard.getContext("2d");
 
 // Connect
-var io = io.connect("http://localhost:8888");
+var io = io.connect("http://localhost:3000");
 
 // Window size
 whiteboard.style.top = 0 + controls.offsetHeight;

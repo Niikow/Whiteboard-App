@@ -32,5 +32,5 @@ io.on("connect", (socket) => {
 
 app.use(express.static("public"));
 
-let PORT = process.env.PORT || 8888;
+let PORT = process.env.PORT || 3000;
 http.listen(PORT, () => console.log(`Server started on port ${PORT}`));
