@@ -17,12 +17,11 @@ io.on("connect", (socket) => {
     //     }
     // });
 
-    function onNewConnection() {
+    socket.on("onNewConnection", function () {
         for (const event of events) {
             socket.emit(event.name, event.data);
-            socket.emit();
         }
-    }
+    });
 
     function relay(name) {
         socket.on(name, (data) => {
