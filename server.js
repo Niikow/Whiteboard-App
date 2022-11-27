@@ -4,7 +4,6 @@ var path = require("path");
 var http = require("http").createServer(app);
 var io = require("socket.io")(http);
 var redis = require("socket.io-redis");
-
 io.adapter(redis({ host: process.env.REDIS_ENDPOINT, port: 6379 }));
 
 
