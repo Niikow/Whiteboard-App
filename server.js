@@ -4,16 +4,32 @@ var http = require("http").createServer(app);
 var io = require("socket.io")(http);
 
 var connections = [];
+const events = [];
 
 io.on("connect", (socket) => {
     connections.push(socket);
     console.log(`${socket.id} has connected`);
+    console.log("Connected: " + connections.length);
+
+    // socket.on("connect", function () {
+    //     for (const event of events) {
+    //         socket.emit(event.name, event.data);
+    //     }
+    // });
+
+    function onNewConnection() {
+        for (const event of events) {
+            socket.emit(event.name, event.data);
+            socket.emit();
+        }
+    }
 
     function relay(name) {
         socket.on(name, (data) => {
             connections.forEach((con) => {
                 if (con.id !== socket.id) {
                     con.emit(name, data);
+                    events.push({ name: name, data: data });
                 }
             });
         });
@@ -28,6 +44,13 @@ io.on("connect", (socket) => {
         "clear",
         "changeFontSize",
     ].forEach(relay);
+
+    socket.on("disconnect", function () {
+        // console.log("hello");
+        connections = connections.filter((con) => con.id !== socket.id);
+        console.log(`${socket.id} has disconnected`);
+        console.log("Connected: " + connections.length);
+    });
 });
 
 app.use(express.static("public"));

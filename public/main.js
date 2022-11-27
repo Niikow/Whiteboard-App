@@ -105,6 +105,7 @@ window.onload = function () {
     // Set background to be white
     context.fillStyle = "white";
     context.fillRect(0, 0, whiteboard.width, whiteboard.height);
+    io.emit("onNewConnection");
 
     // Change colour button
     colourButton.addEventListener("change", () =>
