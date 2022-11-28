@@ -3,12 +3,36 @@ var app = express();
 var path = require("path");
 var http = require("http").createServer(app);
 var io = require("socket.io")(http);
-var redis = require("socket.io-redis");
-io.adapter(redis({ host: process.env.REDIS_ENDPOINT, port: 6379 }));
+var redis = require("ioredis");
+
+// import {promisify } from "util"
+
+const client = redis.createClient();
+
+
+
+
+
+
 
 
 var connections = [];
 const events = [];
+
+const dbredisEvents = [];
+
+
+// async function loadData(){
+
+//     var redisString = await client.get('redisEvents2');
+
+//     var betterString = JSON.parse(redisString);
+
+//     dbredisEvents.push(betterString);
+
+// }
+
+// loadData();
 
 io.on("connect", (socket) => {
     connections.push(socket);
@@ -20,12 +44,38 @@ io.on("connect", (socket) => {
     //         socket.emit(event.name, event.data);
     //     }
     // });
+  
+    socket.on("onNewConnection", async function () {
 
-    socket.on("onNewConnection", function () {
+
+        // loads redis data 
+        
+
         for (const event of events) {
+
+            
             socket.emit(event.name, event.data);
         }
+
+        // for (const eachEvent of dbredisEvents){
+
+        //     socket.emit(eachEvent.name, eachEvent.data);
+        // }
+       
+       
     });
+
+    // was not async before
+
+    async function saveData(name, data){
+        // was json.stringify
+        client.set(name , JSON.stringify(data));
+
+        
+    }
+
+
+
 
     function relay(name) {
         socket.on(name, (data) => {
@@ -33,11 +83,14 @@ io.on("connect", (socket) => {
                 if (con.id !== socket.id) {
                     con.emit(name, data);
                     events.push({ name: name, data: data });
+                    saveData('redisEvents' , events);
                 }
             });
         });
     }
 
+   
+    // This is where data is asked for then given out
     [
         "mouseup",
         "mousedown",
@@ -47,6 +100,13 @@ io.on("connect", (socket) => {
         "clear",
         "changeFontSize",
     ].forEach(relay);
+
+    // Where we will save the message
+
+ 
+
+
+    
 
     socket.on("disconnect", function () {
         // console.log("hello");
@@ -60,3 +120,4 @@ app.use(express.static("public"));
 
 let PORT = process.env.PORT || 3000;
 http.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+
