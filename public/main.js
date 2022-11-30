@@ -9,113 +9,216 @@ const redrawButton = document.getElementById("redrawButton");
 const fontSizeButton = document.getElementById("FontSize");
 const context = whiteboard.getContext("2d");
 
-// Connect
-var io = io.connect("http://localhost:3000");
-
 // Window size
 whiteboard.style.top = 0 + controls.offsetHeight;
 whiteboard.height = window.innerHeight - controls.offsetHeight;
 whiteboard.width = window.innerWidth;
 
 // Selecting tool
-function selectDrawer(msg) {
-    console.log(msg);
-    switch (msg) {
+const Drawer = {};
+var io;
+
+function getDrawer() {
+    switch (shapeButton.value) {
         case "Line":
-            return pencilDrawer;
+            return Drawer.line;
         case "Circle":
-            return circleDrawer;
+            return Drawer.circle;
         case "Rectangle":
-            return rectangleDrawer;
+            return Drawer.rect;
         case "Text":
-            return textDrawer;
+            return Drawer.text;
     }
 }
 
-// Selected tool
-let drawer = selectDrawer(shapeButton.value);
-let text;
+function getFont() {
+    return fontSizeButton.value + "px sans";
+}
+
+function getColor() {
+    return colourButton.value;
+}
+
 let img = null;
-let pressedDown = false;
+
+function checkSave(inProgress) {
+    if (img) {
+        context.putImageData(img, 0, 0);
+        if (!inProgress) img = null;
+    } else if (inProgress) {
+        img = context.getImageData(0, 0, whiteboard.width, whiteboard.height);
+    }
+}
+
+function contextBegin({ color, font }) {
+    context.beginPath();
+
+    if (color) {
+        context.fillStyle = color;
+        context.strokeStyle = color;
+    }
+
+    if (font) {
+        console.log(font);
+        context.font = font;
+    }
+}
 
 const eventHandler = {
-    mousemove: function ({ x, y }) {
-        if (!pressedDown) return;
-        if (!drawer) return;
-        if (img) {
-            context.putImageData(img, 0, 0);
-        }
-        drawer.draw(context, x, y);
+    drawText: function ({ x, y, text, color, font }) {
+        contextBegin({ color, font });
+        context.fillText(text, x, y);
     },
 
-    mouseup: function ({ x, y }) {
-        pressedDown = false;
-        drawer?.mouseUp(context, x, y);
-        img = null;
+    drawLine: function ({ x, y, fromX, fromY, color }) {
+        contextBegin({ color });
+
+        context.lineWidth = 10;
+        context.lineCap = "round";
+        context.moveTo(fromX, fromY);
+        context.lineTo(x, y);
+        context.stroke();
     },
 
-    mousedown: function ({ x, y, text }) {
-        pressedDown = true;
-        if (!drawer) return;
-        if (drawer == textDrawer) {
-            console.log(context.value);
-        }
-        if (drawer.holdDown) {
-            img = context.getImageData(
-                0,
-                0,
-                whiteboard.width,
-                whiteboard.height
-            );
-        }
-        if (text) {
-            drawer.text = text;
-        }
+    drawRect: function ({ x, y, fromX, fromY, color, inProgress }) {
+        contextBegin({ color });
+        checkSave(inProgress);
+        context.fillStyle = color;
+        context.strokeStyle = color;
 
-        drawer.mouseDown(context, x, y);
-    },
-    changeDrawer: function ({ name }) {
-        drawer = selectDrawer(name);
+        const width = x - fromX;
+        const height = y - fromY;
+        context.strokeRect(fromX, fromY, width, height);
     },
 
-    changeColor: function ({ name }) {
-        context.strokeStyle = name;
+    drawCircle: function ({ x, y, fromX, fromY, color, inProgress }) {
+        contextBegin({ color });
+        checkSave(inProgress);
+        context.fillStyle = color;
+        context.strokeStyle = color;
+
+        context.lineWidth = 10;
+        context.lineCap = "round";
+
+        context.beginPath();
+        context.moveTo(fromX, fromY + (y - fromY) / 2);
+
+        // Draws top half of circle
+        context.bezierCurveTo(
+            fromX,
+            fromY,
+            x,
+            fromY,
+            x,
+            fromY + (y - fromY) / 2
+        );
+
+        // Draws bottom half of circle
+        context.bezierCurveTo(x, y, fromX, y, fromX, fromY + (y - fromY) / 2);
+
+        context.stroke();
     },
 
     clear: function () {
         context.clearRect(0, 0, whiteboard.width, whiteboard.height);
     },
-
-    changeFontSize: function ({ name }) {
-        context.font = `${name}px Arial`;
-    },
 };
-
-for (const [key, value] of Object.entries(eventHandler)) {
-    io.on(key, value);
-}
 
 function emit(name, args) {
     eventHandler[name](args);
-    io.emit(name, args);
+    if (!args.inProgress) io.emit(name, args);
+}
+
+Drawer.line = {
+    mousedown: function ({ x, y }) {
+        this.pressedDown = true;
+        this.fromX = x;
+        this.fromY = y;
+    },
+
+    mouseup: function () {
+        this.pressedDown = false;
+    },
+    mousemove: function ({ x, y }) {
+        if (!this.pressedDown) return;
+
+        emit("drawLine", {
+            fromX: this.fromX,
+            fromY: this.fromY,
+            color: getColor(),
+            x,
+            y,
+        });
+
+        this.fromX = x;
+        this.fromY = y;
+    },
+};
+
+function shapeDrawer(name) {
+    name = `draw${name}`;
+    return {
+        mousedown: function ({ x, y }) {
+            this.fromX = x;
+            this.fromY = y;
+            this.pressedDown = true;
+        },
+
+        mouseup: function ({ x, y }) {
+            this.pressedDown = false;
+            emit(name, {
+                fromX: this.fromX,
+                fromY: this.fromY,
+                color: getColor(),
+                inProgress: false,
+                x,
+                y,
+            });
+        },
+
+        mousemove: function ({ x, y }) {
+            if (!this.pressedDown) return;
+            emit(name, {
+                fromX: this.fromX,
+                fromY: this.fromY,
+                color: getColor(),
+                inProgress: true,
+                x,
+                y,
+            });
+        },
+    };
+}
+
+Drawer.rect = shapeDrawer("Rect");
+Drawer.circle = shapeDrawer("Circle");
+Drawer.text = {
+    mousedown: function ({ x, y }) {
+        const text = prompt("Enter text");
+        emit("drawText", {
+            x,
+            y,
+            text,
+            color: getColor(),
+            font: getFont(),
+        });
+    },
+};
+
+function onEvent(event, pos) {
+    getDrawer()?.[event]?.(pos);
 }
 
 // Main
 window.onload = function () {
+    io = io.connect("http://localhost:3000");
+    for (const [key, value] of Object.entries(eventHandler)) {
+        io.on(key, value);
+    }
+
     // Set background to be white
     context.fillStyle = "white";
     context.fillRect(0, 0, whiteboard.width, whiteboard.height);
-    io.emit("onNewConnection");
-
-    // Change colour button
-    colourButton.addEventListener("change", () =>
-        emit("changeColor", { name: colourButton.value })
-    );
-
-    // Change drawing tool
-    shapeButton.addEventListener("change", () =>
-        emit("changeDrawer", { name: shapeButton.value })
-    );
 
     // Save image
     savePNGButton.addEventListener("click", () => {
@@ -127,117 +230,16 @@ window.onload = function () {
 
     redrawButton.addEventListener("click", () => emit("clear", {}));
 
-    // Change font size
-    fontSizeButton.addEventListener("change", () =>
-        emit("changeFontSize", { name: fontSizeButton.value })
+    function coord(e) {
+        return {
+            x: e.pageX - whiteboard.offsetLeft,
+            y: e.pageY - whiteboard.offsetTop,
+        };
+    }
+
+    ["mousedown", "mouseup", "mousemove"].forEach((name) =>
+        whiteboard.addEventListener(name, (event) =>
+            onEvent(name, coord(event))
+        )
     );
-    whiteboard.addEventListener("mousedown", (e) => {
-        const arg = coord(e);
-        if (drawer == textDrawer) {
-            arg.text = prompt("Enter text");
-        }
-        emit("mousedown", arg);
-    });
-
-    whiteboard.addEventListener("mouseup", (e) => emit("mouseup", coord(e)));
-    whiteboard.addEventListener("mousemove", (e) =>
-        emit("mousemove", coord(e))
-    );
-};
-
-function coord(e) {
-    return {
-        x: e.pageX - whiteboard.offsetLeft,
-        y: e.pageY - whiteboard.offsetTop,
-    };
-}
-
-const pencilDrawer = {
-    mouseDown: function (context, x, y) {
-        context.moveTo(x, y);
-        this.draw(context, x, y);
-    },
-
-    mouseUp: function (context, x, y) {
-        context.beginPath();
-    },
-
-    draw: function (context, x, y) {
-        context.linewidth = 10;
-        context.lineCap = "round";
-        context.lineTo(x, y);
-        context.stroke();
-    },
-};
-
-const circleDrawer = {
-    holdDown: true,
-    mouseDown: function (context, x, y) {
-        this.startX = x;
-        this.startY = y;
-    },
-
-    mouseUp: function (context, x, y) {},
-
-    draw: function (context, x, y) {
-        context.linewidth = 10;
-        context.lineCap = "round";
-
-        context.beginPath();
-        context.moveTo(this.startX, this.startY + (y - this.startY) / 2);
-
-        // Draws top half of circle
-        context.bezierCurveTo(
-            this.startX,
-            this.startY,
-            x,
-            this.startY,
-            x,
-            this.startY + (y - this.startY) / 2
-        );
-
-        // Draws bottom half of circle
-        context.bezierCurveTo(
-            x,
-            y,
-            this.startX,
-            y,
-            this.startX,
-            this.startY + (y - this.startY) / 2
-        );
-
-        context.stroke();
-    },
-};
-
-const rectangleDrawer = {
-    holdDown: true,
-
-    mouseDown: function (context, x, y) {
-        this.startX = x;
-        this.startY = y;
-    },
-
-    mouseUp: function (context, x, y) {},
-
-    draw: function (context, x, y) {
-        context.linewidth = 10;
-        context.lineCap = "round";
-
-        const width = x - this.startX;
-        const height = y - this.startY;
-        context.strokeRect(this.startX, this.startY, width, height);
-    },
-};
-
-// sussy
-//i don't think this is horror show
-const textDrawer = {
-    //need <0 now i can't switch to other tools
-    // i hab an idea
-
-    mouseDown: function (context, x, y) {
-        context.fillStyle = colourButton.value;
-        context.fillText(this.text, x, y);
-    },
 };

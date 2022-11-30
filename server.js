@@ -1,62 +1,49 @@
-var express = require("express");
-var app = express();
-var path = require("path");
-var http = require("http").createServer(app);
-var io = require("socket.io")(http);
-var redis = require("socket.io-redis");
-io.adapter(redis({ host: process.env.REDIS_ENDPOINT, port: 6379 }));
+const adapter = require("@socket.io/redis-adapter");
+const redis = require("redis");
 
+const express = require("express");
+const app = express();
+const path = require("path");
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
 
-var connections = [];
-const events = [];
+async function main() {
+    const pubClient = redis.createClient({ url: "redis://localhost:6379" });
+    const subClient = pubClient.duplicate();
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    io.adapter(adapter.createAdapter(pubClient, subClient));
 
-io.on("connect", (socket) => {
-    connections.push(socket);
-    console.log(`${socket.id} has connected`);
-    console.log("Connected: " + connections.length);
+    const connections = new Set();
+    const events = [];
 
-    // socket.on("connect", function () {
-    //     for (const event of events) {
-    //         socket.emit(event.name, event.data);
-    //     }
-    // });
+    io.on("connect", (socket) => {
+        connections.add(socket);
+        console.log(`${socket.id} has connected`);
+        console.log("Connected: " + connections.size);
 
-    socket.on("onNewConnection", function () {
         for (const event of events) {
             socket.emit(event.name, event.data);
         }
-    });
 
-    function relay(name) {
-        socket.on(name, (data) => {
-            connections.forEach((con) => {
-                if (con.id !== socket.id) {
-                    con.emit(name, data);
-                    events.push({ name: name, data: data });
-                }
-            });
+        ["drawText", "drawLine", "drawCircle", "drawRect", "clear"].forEach(
+            (name) =>
+                socket.on(name, (data) => {
+                    events.push({ name, data });
+                    socket.broadcast.emit(name, data);
+                })
+        );
+
+        socket.on("disconnect", function () {
+            connections.delete(socket);
+            console.log(`${socket.id} has disconnected`);
+            console.log("Connected: " + connections.size);
         });
-    }
-
-    [
-        "mouseup",
-        "mousedown",
-        "mousemove",
-        "changeDrawer",
-        "changeColor",
-        "clear",
-        "changeFontSize",
-    ].forEach(relay);
-
-    socket.on("disconnect", function () {
-        // console.log("hello");
-        connections = connections.filter((con) => con.id !== socket.id);
-        console.log(`${socket.id} has disconnected`);
-        console.log("Connected: " + connections.length);
     });
-});
 
-app.use(express.static("public"));
+    app.use(express.static("public"));
 
-let PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+    let PORT = process.env.PORT || 3000;
+    http.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+}
+
+main();
