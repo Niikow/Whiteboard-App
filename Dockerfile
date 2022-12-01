@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:9 AS build
+FROM mhart/alpine-node:14 AS build
 WORKDIR /srv
 ADD package.json .
 RUN npm install
