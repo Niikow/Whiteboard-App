@@ -8,7 +8,7 @@ const http = require("http").createServer(app);
 const io = require("socket.io")(http);
 
 async function main() {
-    const pubClient = redis.createClient({ url: "redis://localhost:6379" });
+    const pubClient = redis.createClient({ host: process.env.REDIS_ENDPOINT, port: 6379 });
     const subClient = pubClient.duplicate();
     await Promise.all([pubClient.connect(), subClient.connect()]);
     io.adapter(adapter.createAdapter(pubClient, subClient));
